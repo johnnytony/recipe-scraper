@@ -17,10 +17,18 @@ class Exporter:
             {'name': 'caderno-9', 'description': 'Peixe'}, 
          ]
 
-    def export_data(self):
+        exported_data = self.export_initial_data()
+        self._check_data_integrity(exported_data)
+
+
+    def _check_data_integrity(self, exported_data):
+        for catalog in self.accepted_catalogs:
+            if catalog['name'] not in [link['catalog'] for link in exported_data]:
+                raise Exception(f'There is data differencies. Website might habe changed! catalog{self.accepted_catalogs} != {[link['catalog'] for link in exported_data] }')
+    
+    def export_initial_data(self):
         # Headers to mimic a browser request (prevents 403 Forbidden errors)
      
-        
         # Get the HTML content
         response = requests.get('https://www.saborintenso.com/', headers=self.headers)
         response.raise_for_status()  # Raises an error if request failed
@@ -35,8 +43,6 @@ class Exporter:
         if not link_divs:
             return None
 
-        # Extract links and filter by accepted catalogs
-        accepted_names = {catalog['name'] for catalog in self.accepted_catalogs}
         links_data = []
         for div in link_divs:
             link = div.find('a', href=True)
@@ -45,15 +51,11 @@ class Exporter:
                 href = link.get('href')
                 catalog = href[:-1].split('/')[-1]
 
-                if catalog in accepted_names:
-                    links_data.append({
-                        'href': href,
-                        'text': link.get_text(strip=True),
-                        'catalog': catalog,
-                        'full_link': link
-                    })
-        
-        import pdb
-        pdb.set_trace()
+                links_data.append({
+                    'href': href,
+                    'text': link.get_text(strip=True),
+                    'catalog': catalog,
+                    'full_link': link
+                })
         
         return links_data if links_data else None
